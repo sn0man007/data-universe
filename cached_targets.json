@@ -1,0 +1,26 @@
+{
+    "app_server_101": {
+        "url": "http://app-server-101.prod/metrics",
+        "id": "app_server_101",
+        "metadata": {
+            "region": "us-east-1",
+            "source": "dynamic"
+        }
+    },
+    "app_server_102": {
+        "url": "http://app-server-102.prod/metrics",
+        "id": "app_server_102",
+        "metadata": {
+            "region": "us-east-1",
+            "source": "dynamic"
+        }
+    },
+    "db_primary_01": {
+        "url": "http://db-primary-01.prod/metrics",
+        "id": "db_primary_01",
+        "metadata": {
+            "region": "eu-west-1",
+            "source": "dynamic"
+        }
+    }
+}

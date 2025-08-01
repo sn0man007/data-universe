@@ -1,0 +1,22 @@
+# targets.yaml
+# This file contains the dynamic scraping targets for the Subnet 13 miner.
+# Update this file based on intelligence from the SN13 Dashboard.
+
+# Targets for the X (formerly Twitter) data source.
+# Use keywords, hashtags, or user handles.
+x_targets:
+  - "#bittensor"
+  - "#TAO"
+  - "from:macrocosm_ai"
+
+# Targets for the Reddit data source.
+# Specify subreddit names.
+reddit_targets:
+  - "r/bittensor_"
+  - "r/wallstreetbets"
+
+# Targets for the YouTube data source.
+# Specify keywords for searching video transcripts.
+youtube_targets:
+  - "decentralized AI"
+  - "LLM training"

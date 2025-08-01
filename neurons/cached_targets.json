@@ -1,0 +1,65 @@
+{
+    "X.flash": {
+        "scraper_id": "X.flash",
+        "cadence_seconds": 300,
+        "labels_to_scrape": [
+            {
+                "label_choices": [
+                    "#tao",
+                    "#btc",
+                    "#decentralizedfinance",
+                    "#Israel",
+                    "#crypto",
+                    "#MacrocosmosAI",
+                    "#Ukraine",
+                    "#macrocosmos",
+                    "#Trump",
+                    "#bitcoiner",
+                    "#Harris",
+                    "#bitcoin",
+                    "#defi",
+                    "#bitcoinnews"
+                ],
+                "max_age_hint_minutes": 43200,
+                "max_data_entities": null
+            }
+        ]
+    },
+    "Reddit.lite": {
+        "scraper_id": "Reddit.lite",
+        "cadence_seconds": 300,
+        "labels_to_scrape": [
+            {
+                "label_choices": [
+                    "worldnews",
+                    "Bitcoin",
+                    "Cryptomarkets",
+                    "Btc",
+                    "worldpolitics",
+                    "Cryptocurrency",
+                    "WallstreetBets",
+                    "Bittensor_",
+                    "politics",
+                    "BitcoinCash"
+                ],
+                "max_age_hint_minutes": 43200,
+                "max_data_entities": null
+            }
+        ]
+    },
+    "YouTube.custom.transcript": {
+        "scraper_id": "YouTube.custom.transcript",
+        "cadence_seconds": 300,
+        "labels_to_scrape": [
+            {
+                "label_choices": [
+                    "bittensor",
+                    "decentralized ai",
+                    "opentensor"
+                ],
+                "max_age_hint_minutes": 43200,
+                "max_data_entities": null
+            }
+        ]
+    }
+}
