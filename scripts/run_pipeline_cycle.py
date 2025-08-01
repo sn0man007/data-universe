@@ -29,6 +29,37 @@ REDDIT_SCRAPER_ACTOR_ID = "trudax/reddit-scraper-lite"
 YOUTUBE_DISCOVERY_ACTOR_ID = "streamers/youtube-scraper"
 YOUTUBE_TRANSCRIPT_ACTOR_ID = "smartly_automated/youtube-transcript-scraper-premium-version"
 
+# --- Cost Management Configuration ---
+MONTHLY_BUDGET_USD = 135.0
+# Estimated costs per 1,000 items (adjust these based on Apify pricing)
+COST_PER_1000_X = 0.50
+COST_PER_1000_REDDIT = 2.00
+COST_PER_1000_YOUTUBE_DISCOVERY = 5.00
+COST_PER_1000_YOUTUBE_TRANSCRIPT = 20.00
+
+def calculate_daily_limits() -> dict:
+    """Calculates the maximum number of items to scrape per day to stay within budget."""
+    daily_budget = MONTHLY_BUDGET_USD / 30.0
+    # Allocate the budget (e.g., 40% to X, 40% to Reddit, 20% to YouTube)
+    budget_x = daily_budget * 0.4
+    budget_reddit = daily_budget * 0.4
+    budget_youtube = daily_budget * 0.2
+    
+    # Calculate how many items can be scraped per day for each source
+    limit_x = int((budget_x / COST_PER_1000_X) * 1000)
+    limit_reddit = int((budget_reddit / COST_PER_1000_REDDIT) * 1000)
+    # For YouTube, the cost is for both discovery and transcripts
+    # This is a simplified calculation; a more advanced model could be used.
+    limit_youtube_videos = int((budget_youtube / (COST_PER_1000_YOUTUBE_DISCOVERY + COST_PER_1000_YOUTUBE_TRANSCRIPT)) * 1000)
+
+    limits = {
+        "x_daily_limit": limit_x,
+        "reddit_daily_limit": limit_reddit,
+        "youtube_daily_limit": limit_youtube_videos,
+    }
+    logging.info(f"Calculated daily scraping limits based on ${MONTHLY_BUDGET_USD}/month budget: {limits}")
+    return limits
+
 # --- State Management (Watermarking) ---
 
 def load_pipeline_state() -> dict:
@@ -87,6 +118,7 @@ def main_cycle():
     logging.info("--- Starting New Data Pipeline Cycle ---")
     client = ApifyClient(APIFY_TOKEN)
     pipeline_state = load_pipeline_state()
+    daily_limits = calculate_daily_limits()
     
     logging.info("Fetching dynamic targets...")
     try:
@@ -100,12 +132,14 @@ def main_cycle():
 
     # Trigger X Scraper
     if 'X.flash' in scraper_configs:
+        # Distribute the daily limit across the number of targets
+        num_x_targets = len(scraper_configs['X.flash'].labels_to_scrape)
+        limit_per_x_target = daily_limits['x_daily_limit'] // num_x_targets if num_x_targets > 0 else 0
+        
         for label_config in scraper_configs['X.flash'].labels_to_scrape:
             if label_config.label_choices:
                 label = random.choice(label_config.label_choices)
-                # --- DEFINITIVE FIX: Increase maxItems to satisfy actor requirements ---
-                run_input = {"searchTerms": [label], "maxItems": 50}
-                # --- END FIX ---
+                run_input = {"searchTerms": [label], "maxItems": limit_per_x_target}
                 if label in pipeline_state:
                     run_input["since"] = pipeline_state[label].strftime('%Y-%m-%d')
                 
@@ -114,20 +148,26 @@ def main_cycle():
 
     # Trigger Reddit Scraper
     if 'Reddit.lite' in scraper_configs:
+        num_reddit_targets = len(scraper_configs['Reddit.lite'].labels_to_scrape)
+        limit_per_reddit_target = daily_limits['reddit_daily_limit'] // num_reddit_targets if num_reddit_targets > 0 else 0
+        
         for label_config in scraper_configs['Reddit.lite'].labels_to_scrape:
             if label_config.label_choices:
                 label = random.choice(label_config.label_choices)
-                run_input = {"searches": [label], "maxItems": 50, "sortBy": "new"}
+                run_input = {"searches": [label], "maxItems": limit_per_reddit_target, "sortBy": "new"}
                 run_info = trigger_and_wait(client, REDDIT_SCRAPER_ACTOR_ID, run_input, label, DataSource.REDDIT)
                 if run_info: successful_run_infos.append(run_info)
 
     # Trigger YouTube Discovery (Stage 1)
     youtube_video_urls = []
     if 'YouTube.custom.transcript' in scraper_configs:
+        num_youtube_targets = len(scraper_configs['YouTube.custom.transcript'].labels_to_scrape)
+        limit_per_youtube_target = daily_limits['youtube_daily_limit'] // num_youtube_targets if num_youtube_targets > 0 else 0
+
         for label_config in scraper_configs['YouTube.custom.transcript'].labels_to_scrape:
             if label_config.label_choices:
                 label = random.choice(label_config.label_choices)
-                run_input = {"searchQueries": [label], "maxVideos": 5}
+                run_input = {"searchQueries": [label], "maxVideos": limit_per_youtube_target}
                 if label in pipeline_state:
                     run_input["uploadedAfter"] = "7_days_ago"
                 
@@ -141,9 +181,7 @@ def main_cycle():
 
     # Trigger YouTube Transcripts (Stage 2)
     if youtube_video_urls:
-        # --- DEFINITIVE FIX: Format URLs as a list of objects ---
         run_input = {"video_urls": [{"url": url} for url in youtube_video_urls]}
-        # --- END FIX ---
         run_info = trigger_and_wait(client, YOUTUBE_TRANSCRIPT_ACTOR_ID, run_input, "transcript_batch", DataSource.YOUTUBE)
         if run_info:
             run_info['source'] = 'YOUTUBE_TRANSCRIPTS' 
