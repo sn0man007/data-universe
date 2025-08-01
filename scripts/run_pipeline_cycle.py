@@ -3,6 +3,7 @@ import sys
 import json
 import random
 import logging
+import traceback
 import datetime as dt
 from apify_client import ApifyClient
 from dotenv import load_dotenv
@@ -31,82 +32,77 @@ YOUTUBE_TRANSCRIPT_ACTOR_ID = "smartly_automated/youtube-transcript-scraper-prem
 
 # --- Cost Management Configuration ---
 MONTHLY_BUDGET_USD = 135.0
-# Estimated costs per 1,000 items (adjust these based on Apify pricing)
+RUNS_PER_DAY = 24 
+
 COST_PER_1000_X = 0.50
 COST_PER_1000_REDDIT = 2.00
 COST_PER_1000_YOUTUBE_DISCOVERY = 5.00
 COST_PER_1000_YOUTUBE_TRANSCRIPT = 20.00
 
-def calculate_daily_limits() -> dict:
-    """Calculates the maximum number of items to scrape per day to stay within budget."""
+def calculate_per_run_limits() -> dict:
+    """Calculates the maximum number of items to scrape per run to stay within budget."""
     daily_budget = MONTHLY_BUDGET_USD / 30.0
-    # Allocate the budget (e.g., 40% to X, 40% to Reddit, 20% to YouTube)
-    budget_x = daily_budget * 0.4
-    budget_reddit = daily_budget * 0.4
-    budget_youtube = daily_budget * 0.2
+    per_run_budget = daily_budget / RUNS_PER_DAY
     
-    # Calculate how many items can be scraped per day for each source
+    budget_x = per_run_budget * 0.4
+    budget_reddit = per_run_budget * 0.4
+    budget_youtube = per_run_budget * 0.2
+    
     limit_x = int((budget_x / COST_PER_1000_X) * 1000)
     limit_reddit = int((budget_reddit / COST_PER_1000_REDDIT) * 1000)
-    # For YouTube, the cost is for both discovery and transcripts
-    # This is a simplified calculation; a more advanced model could be used.
     limit_youtube_videos = int((budget_youtube / (COST_PER_1000_YOUTUBE_DISCOVERY + COST_PER_1000_YOUTUBE_TRANSCRIPT)) * 1000)
 
     limits = {
-        "x_daily_limit": limit_x,
-        "reddit_daily_limit": limit_reddit,
-        "youtube_daily_limit": limit_youtube_videos,
+        "x_per_run_limit": limit_x,
+        "reddit_per_run_limit": limit_reddit,
+        "youtube_per_run_limit": limit_youtube_videos,
     }
-    logging.info(f"Calculated daily scraping limits based on ${MONTHLY_BUDGET_USD}/month budget: {limits}")
+    logging.info(f"Calculated per-run scraping limits (for {RUNS_PER_DAY} runs/day): {limits}")
     return limits
 
 # --- State Management (Watermarking) ---
 
 def load_pipeline_state() -> dict:
     """Loads the last run timestamps from the state file."""
-    if not os.path.exists(STATE_FILE_PATH):
-        return {}
+    if not os.path.exists(STATE_FILE_PATH): return {}
     try:
         with open(STATE_FILE_PATH, 'r') as f:
             state = json.load(f)
-            # Convert timestamp strings back to datetime objects
             return {label: dt.datetime.fromisoformat(ts) for label, ts in state.items()}
     except (json.JSONDecodeError, IOError):
-        logging.warning("Could not read or parse state file. Starting from scratch.")
+        logging.warning("Could not read state file. Starting fresh.")
         return {}
 
 def save_pipeline_state(state: dict):
     """Saves the latest timestamps to the state file."""
     try:
         with open(STATE_FILE_PATH, 'w') as f:
-            # Convert datetime objects to ISO format strings for JSON serialization
             serializable_state = {label: ts.isoformat() for label, ts in state.items()}
             json.dump(serializable_state, f, indent=4)
-        logging.info(f"Successfully saved pipeline state to {STATE_FILE_PATH}")
+        logging.info(f"Successfully saved pipeline state.")
     except IOError:
-        logging.error(f"Could not write to state file at {STATE_FILE_PATH}")
+        logging.error(f"Could not write to state file.")
 
 # --- Core Orchestration Logic ---
 
 def trigger_and_wait(client: ApifyClient, actor_id: str, run_input: dict, label: str, source: DataSource) -> dict | None:
-    """Triggers an Apify actor, waits for it to finish, and returns run info on success."""
+    """Triggers an Apify actor and waits for it to finish."""
     try:
         logging.info(f"Triggering actor '{actor_id}' for label '{label}' with input: {run_input}")
-        actor_run = client.actor(actor_id).call(run_input=run_input)
-        run_id = actor_run['id']
-        logging.info(f"Actor '{actor_id}' started! Run ID: {run_id}")
+        run = client.actor(actor_id).call(run_input=run_input)
+        logging.info(f"Actor '{actor_id}' started! Run ID: {run['id']}")
         
-        logging.info(f"Waiting for run {run_id} to complete...")
-        run_details = client.run(run_id).wait_for_finish()
+        logging.info(f"Waiting for run {run['id']} to complete...")
+        run_details = client.run(run['id']).wait_for_finish()
 
         if run_details['status'] == 'SUCCEEDED':
-            logging.info(f"✅ Apify run {run_id} for '{label}' completed successfully.")
-            return {'run_id': run_id, 'source': source, 'label': label}
+            logging.info(f"✅ Apify run {run['id']} completed successfully.")
+            return {'run_id': run['id'], 'source': source, 'label': label}
         else:
-            logging.error(f"❌ Apify run {run_id} for '{label}' did not succeed. Status: {run_details['status']}.")
+            logging.error(f"❌ Apify run {run['id']} did not succeed. Status: {run_details['status']}.")
             return None
     except Exception:
-        logging.error(f"An error occurred while running actor {actor_id} for '{label}': {traceback.format_exc()}")
+        logging.error(f"An error occurred while running actor {actor_id}: {traceback.format_exc()}")
         return None
 
 def main_cycle():
@@ -118,7 +114,7 @@ def main_cycle():
     logging.info("--- Starting New Data Pipeline Cycle ---")
     client = ApifyClient(APIFY_TOKEN)
     pipeline_state = load_pipeline_state()
-    daily_limits = calculate_daily_limits()
+    per_run_limits = calculate_per_run_limits()
     
     logging.info("Fetching dynamic targets...")
     try:
@@ -132,49 +128,47 @@ def main_cycle():
 
     # Trigger X Scraper
     if 'X.flash' in scraper_configs:
-        # Distribute the daily limit across the number of targets
-        num_x_targets = len(scraper_configs['X.flash'].labels_to_scrape)
-        limit_per_x_target = daily_limits['x_daily_limit'] // num_x_targets if num_x_targets > 0 else 0
-        
-        for label_config in scraper_configs['X.flash'].labels_to_scrape:
-            if label_config.label_choices:
-                label = random.choice(label_config.label_choices)
-                run_input = {"searchTerms": [label], "maxItems": limit_per_x_target}
-                if label in pipeline_state:
-                    run_input["since"] = pipeline_state[label].strftime('%Y-%m-%d')
-                
+        num_targets = len(scraper_configs['X.flash'].labels_to_scrape)
+        limit_per_target = per_run_limits['x_per_run_limit'] // num_targets if num_targets > 0 else 0
+        for config in scraper_configs['X.flash'].labels_to_scrape:
+            if config.label_choices:
+                label = random.choice(config.label_choices)
+                # --- DEFINITIVE FIX: Add 'sort' parameter and ensure maxItems is at least 50 ---
+                run_input = {
+                    "searchTerms": [label], 
+                    "maxItems": max(50, limit_per_target),
+                    "sort": "Latest" 
+                }
+                # --- END FIX ---
+                if label in pipeline_state: run_input["since"] = pipeline_state[label].strftime('%Y-%m-%d')
                 run_info = trigger_and_wait(client, X_SCRAPER_ACTOR_ID, run_input, label, DataSource.X)
                 if run_info: successful_run_infos.append(run_info)
 
     # Trigger Reddit Scraper
     if 'Reddit.lite' in scraper_configs:
-        num_reddit_targets = len(scraper_configs['Reddit.lite'].labels_to_scrape)
-        limit_per_reddit_target = daily_limits['reddit_daily_limit'] // num_reddit_targets if num_reddit_targets > 0 else 0
-        
-        for label_config in scraper_configs['Reddit.lite'].labels_to_scrape:
-            if label_config.label_choices:
-                label = random.choice(label_config.label_choices)
-                run_input = {"searches": [label], "maxItems": limit_per_reddit_target, "sortBy": "new"}
+        num_targets = len(scraper_configs['Reddit.lite'].labels_to_scrape)
+        limit_per_target = per_run_limits['reddit_per_run_limit'] // num_targets if num_targets > 0 else 0
+        for config in scraper_configs['Reddit.lite'].labels_to_scrape:
+            if config.label_choices:
+                label = random.choice(config.label_choices)
+                run_input = {"searches": [label], "maxItems": limit_per_target, "sortBy": "new"}
                 run_info = trigger_and_wait(client, REDDIT_SCRAPER_ACTOR_ID, run_input, label, DataSource.REDDIT)
                 if run_info: successful_run_infos.append(run_info)
 
     # Trigger YouTube Discovery (Stage 1)
     youtube_video_urls = []
     if 'YouTube.custom.transcript' in scraper_configs:
-        num_youtube_targets = len(scraper_configs['YouTube.custom.transcript'].labels_to_scrape)
-        limit_per_youtube_target = daily_limits['youtube_daily_limit'] // num_youtube_targets if num_youtube_targets > 0 else 0
-
-        for label_config in scraper_configs['YouTube.custom.transcript'].labels_to_scrape:
-            if label_config.label_choices:
-                label = random.choice(label_config.label_choices)
-                run_input = {"searchQueries": [label], "maxVideos": limit_per_youtube_target}
-                if label in pipeline_state:
-                    run_input["uploadedAfter"] = "7_days_ago"
-                
+        num_targets = len(scraper_configs['YouTube.custom.transcript'].labels_to_scrape)
+        limit_per_target = per_run_limits['youtube_per_run_limit'] // num_targets if num_targets > 0 else 0
+        for config in scraper_configs['YouTube.custom.transcript'].labels_to_scrape:
+            if config.label_choices:
+                label = random.choice(config.label_choices)
+                run_input = {"searchQueries": [label], "maxVideos": limit_per_target}
+                if label in pipeline_state: run_input["uploadedAfter"] = "7_days_ago"
                 run_info = trigger_and_wait(client, YOUTUBE_DISCOVERY_ACTOR_ID, run_input, label, DataSource.YOUTUBE)
                 if run_info:
-                    dataset_items = client.run(run_info['run_id']).dataset().list_items().items
-                    for item in dataset_items:
+                    dataset = client.run(run_info['run_id']).dataset().list_items().items
+                    for item in dataset:
                         url = item.get('url') or item.get('videoUrl')
                         if url: youtube_video_urls.append(url)
                     client.dataset(client.run(run_info['run_id']).get()['defaultDatasetId']).delete()
@@ -190,17 +184,10 @@ def main_cycle():
     # ETL PHASE & UPDATE STATE
     if successful_run_infos:
         logging.info("Starting the ETL process...")
-        etl_ready_infos = []
-        for info in successful_run_infos:
-            source = info['source']
-            if source == 'YOUTUBE_TRANSCRIPTS': source = DataSource.YOUTUBE
-            etl_ready_infos.append({'run_id': info['run_id'], 'source': source, 'label': info['label']})
-        
-        new_timestamps = run_etl(etl_ready_infos)
-        
+        etl_infos = [{'run_id': info['run_id'], 'source': (DataSource.YOUTUBE if info['source'] == 'YOUTUBE_TRANSCRIPTS' else info['source']), 'label': info['label']} for info in successful_run_infos]
+        new_timestamps = run_etl(etl_infos)
         pipeline_state.update(new_timestamps)
         save_pipeline_state(pipeline_state)
-        
         logging.info("ETL process finished.")
     else:
         logging.error("All scrapers failed. Skipping ETL.")

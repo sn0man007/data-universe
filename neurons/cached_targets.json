@@ -5,20 +5,20 @@
         "labels_to_scrape": [
             {
                 "label_choices": [
-                    "#Ukraine",
-                    "#crypto",
-                    "#bitcoinnews",
-                    "#btc",
+                    "#decentralizedfinance",
                     "#tao",
                     "#Israel",
-                    "#Trump",
-                    "#macrocosmos",
-                    "#MacrocosmosAI",
-                    "#decentralizedfinance",
+                    "#btc",
                     "#bitcoin",
-                    "#defi",
                     "#Harris",
-                    "#bitcoiner"
+                    "#bitcoinnews",
+                    "#bitcoiner",
+                    "#macrocosmos",
+                    "#Trump",
+                    "#defi",
+                    "#Ukraine",
+                    "#MacrocosmosAI",
+                    "#crypto"
                 ],
                 "max_age_hint_minutes": 43200,
                 "max_data_entities": null
@@ -31,16 +31,16 @@
         "labels_to_scrape": [
             {
                 "label_choices": [
-                    "Cryptocurrency",
+                    "politics",
                     "Bittensor_",
-                    "BitcoinCash",
                     "WallstreetBets",
-                    "worldnews",
                     "Btc",
-                    "Bitcoin",
                     "worldpolitics",
                     "Cryptomarkets",
-                    "politics"
+                    "worldnews",
+                    "Cryptocurrency",
+                    "Bitcoin",
+                    "BitcoinCash"
                 ],
                 "max_age_hint_minutes": 43200,
                 "max_data_entities": null
