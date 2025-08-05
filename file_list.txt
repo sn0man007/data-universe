@@ -1,0 +1,180 @@
+.
+├── LICENSE
+├── LLM.md
+├── README.md
+├── assets
+│   ├── access_1.png
+│   ├── access_2.png
+│   ├── creating_1.png
+│   ├── creating_2.png
+│   ├── creating_3.png
+│   ├── creating_4.png
+│   ├── macrocosmos-black.png
+│   ├── macrocosmos-white.png
+│   ├── retrieval_1.png
+│   ├── retrieval_2.png
+│   └── retrieval_3.png
+├── bittensor_data_universe.egg-info
+│   ├── PKG-INFO
+│   ├── SOURCES.txt
+│   ├── dependency_links.txt
+│   ├── requires.txt
+│   └── top_level.txt
+├── bittensor_venv
+│   ├── include
+│   │   └── python3.12
+│   └── lib
+│       └── python3.12
+├── common
+│   ├── __init__.py
+│   ├── constants.py
+│   ├── data.py
+│   ├── data_v2.py
+│   ├── date_range.py
+│   ├── metagraph_syncer.py
+│   ├── old_protocol.py
+│   ├── organic_protocol.py
+│   ├── protocol.py
+│   └── utils.py
+├── docs
+│   ├── apify.md
+│   ├── dd_validator_instructions.md
+│   ├── dynamic_desirability.md
+│   ├── hugging_face_validation.md
+│   ├── huggingface_setup.md
+│   ├── miner.md
+│   ├── miner_policy.md
+│   ├── on_demand.md
+│   ├── reddit.md
+│   ├── scoring.md
+│   ├── validator.md
+│   └── youtube.md
+├── file_list.txt
+├── miner_data.db
+├── miner_data.db.backup
+├── neurons
+│   ├── __init__.py
+│   ├── config.py
+│   ├── miner.py
+│   └── validator.py
+├── requirements.txt
+├── rewards
+│   ├── __init__.py
+│   ├── data.py
+│   ├── data_desirability_lookup.py
+│   ├── data_value_calculator.py
+│   └── miner_scorer.py
+├── scraping
+│   ├── __init__.py
+│   ├── apify.py
+│   ├── config
+│   │   ├── __init__.py
+│   │   ├── config_reader.py
+│   │   ├── model.py
+│   │   └── scraping_config.json
+│   ├── coordinator.py
+│   ├── provider.py
+│   ├── reddit
+│   │   ├── __init__.py
+│   │   ├── model.py
+│   │   ├── reddit_custom_scraper.py
+│   │   ├── reddit_lite_scraper.py
+│   │   └── utils.py
+│   ├── scraper.py
+│   ├── utils.py
+│   ├── x
+│   │   ├── __init__.py
+│   │   ├── apidojo_scraper.py
+│   │   ├── enhanced_apidojo_scraper.py
+│   │   ├── microworlds_scraper.py
+│   │   ├── model.py
+│   │   ├── on_demand_model.py
+│   │   ├── quacker_url_scraper.py
+│   │   └── utils.py
+│   └── youtube
+│       ├── invideoiq_transcript_scraper.py
+│       ├── model.py
+│       ├── utils.py
+│       └── youtube_custom_scraper.py
+├── scripts
+│   └── start_validator.py
+├── setup.py
+├── storage
+│   ├── miner
+│   │   ├── miner_storage.py
+│   │   └── sqlite_miner_storage.py
+│   └── validator
+│       ├── hf_validator_storage.py
+│       ├── s3_validator_storage.py
+│       ├── sqlite_memory_validator_storage.py
+│       └── validator_storage.py
+├── tests
+│   ├── __init__.py
+│   ├── common
+│   │   ├── __init__.py
+│   │   ├── test_data.py
+│   │   ├── test_data_v2.py
+│   │   ├── test_metagraph_syncer.py
+│   │   ├── test_protocol.py
+│   │   └── test_utils.py
+│   ├── hf_validation
+│   │   ├── test_decode_url_protocol.py
+│   │   ├── test_encoding_key.json
+│   │   ├── test_reddit_dataset_validation.py
+│   │   └── test_x_dataset_validation.py
+│   ├── integration
+│   │   ├── __init__.py
+│   │   ├── test_on_demand.py
+│   │   └── test_protocol.py
+│   ├── neurons
+│   │   ├── __init__.py
+│   │   ├── test_miner_config.py
+│   │   └── test_validator_config.py
+│   ├── rewards
+│   │   ├── __init__.py
+│   │   ├── test_data_value_calculator.py
+│   │   └── test_miner_scorer.py
+│   ├── scraping
+│   │   ├── __init__.py
+│   │   ├── config
+│   │   ├── reddit
+│   │   ├── test_coordinator.py
+│   │   ├── test_utils.py
+│   │   ├── x
+│   │   └── youtube
+│   ├── storage
+│   │   ├── __init__.py
+│   │   ├── miner
+│   │   └── validator
+│   ├── test_all.py
+│   ├── utils.py
+│   └── vali_utils
+│       ├── __init__.py
+│       ├── test_miner_iterator.py
+│       ├── test_vali_utils.py
+│       └── test_validator_s3_access.py
+├── upload_utils
+│   ├── dataset_card.py
+│   ├── encoding_system.py
+│   ├── huggingface_uploader.py
+│   ├── s3_uploader.py
+│   ├── s3_utils.py
+│   └── utils.py
+└── vali_utils
+    ├── __init__.py
+    ├── api
+    │   ├── auth
+    │   ├── models.py
+    │   ├── routes.py
+    │   ├── server.py
+    │   └── utils.py
+    ├── hf_utils.py
+    ├── load_balancer
+    │   └── validator_registry.py
+    ├── miner_evaluator.py
+    ├── miner_iterator.py
+    ├── organic_query_processor.py
+    ├── utils.py
+    └── validator_s3_access.py
+
+41 directories, 137 files
